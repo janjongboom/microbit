@@ -14,13 +14,20 @@
  * limitations under the License.
  */
 
+// enable accelerometer \o/
+#ifdef MICROBIT_BLE_ACCELEROMETER_SERVICE
+#undef MICROBIT_BLE_ACCELEROMETER_SERVICE
+#endif
+#define MICROBIT_BLE_ACCELEROMETER_SERVICE     1
+
 #include "MicroBit.h"
 
 void app_main()
 {
   while (1)
   {
-	  uBit.display.scroll("BELLO! :)");
+    auto z = uBit.accelerometer.getZ();
+	  uBit.display.scroll(z);
 	  uBit.sleep(1000);
   }
 }

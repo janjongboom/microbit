@@ -1,0 +1,19 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "bla",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "Jan Jongboom",
+  "license": "ISC",
+  "dependencies": {
+    "co": "^4.6.0",
+    "connect": "^2.27.3",
+    "es6-promisify": "^3.0.0",
+    "noble": "^1.2.1",
+    "nodejs-websocket": "^1.4.1"
+  }
+}
