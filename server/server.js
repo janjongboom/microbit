@@ -56,6 +56,8 @@ noble.on('discover', co.wrap(function*(e) {
     console.log('Found', e.advertisement.localName + '...', address);
     // noble.stopScanning();
 
+    var originalE = e;
+
     yield promisify(e.connect.bind(e))();
     console.log('Connected');
 
@@ -69,7 +71,19 @@ noble.on('discover', co.wrap(function*(e) {
     var characteristic = (yield promisify(service.discoverCharacteristics.bind(service))(['e95dca4b251d470aa062fa1922dfa9a8']))[0];
     // console.log('Characteristic', characteristic);
 
+    var first = true;
+    var lastEvent = 0;
+    var freefallStart = null;
+
+    var dataTimer;
+
     characteristic.on('data', e => {
+      clearTimeout(dataTimer);
+      dataTimer = setTimeout(function() {
+        console.log(address, 'Disconnected...');
+        originalE.disconnect();
+      }, 1000);
+
       var z = e[5] << 8 | e[4];
 
       if (z > 32767) { // overflow
@@ -77,20 +91,40 @@ noble.on('discover', co.wrap(function*(e) {
       }
 
       z /= 100;
+      z = Math.abs(z);
 
-      broadcast(JSON.stringify({
-        deviceId: address,
-        type: 'devicemotion',
-        timestamp: +new Date(),
-        z: z
-      }));
+      // only stream every 30 ms. otherwise so much stuff
+      if (Date.now() - lastEvent > 30) {
+        broadcast(JSON.stringify({
+          deviceId: address,
+          type: 'devicemotion',
+          timestamp: +new Date(),
+          z: z
+        }));
+      }
 
-      console.log('read', address, z);
+      if (z < 1 && !freefallStart) {
+        freefallStart = Date.now();
+      }
+      if (z > 1 && freefallStart) {
+        var t = (Date.now() - freefallStart) / 1000;
+        var h = (Math.pow(t, 2) / 8) * 9.81;
+        if (h > 0.1) {
+          console.log('Freefall...', (h.toFixed(2)) + ' meters (in ' + t.toFixed(2) + 's)');
+        }
+        freefallStart = null;
+      }
 
-      setTimeout(() => {
-      // console.log(+new Date(), 'calling read function')
-      characteristic.read();
-      }, 20);
+      lastEvent = Date.now();
+
+      if (first) {
+        console.log('event', address, z);
+        first = false;
+      }
+
+      setTimeout(function() {
+        characteristic.read();
+      }, 10);
     });
 
     characteristic.read();
