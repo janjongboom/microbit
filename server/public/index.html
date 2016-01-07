@@ -53,7 +53,8 @@
             animation: false
           },
           line: {
-            animation: false
+            animation: false,
+            marker: { enabled: false }
           }
         },
         chart: {
@@ -73,8 +74,8 @@
         ,
         xAxis: {
           type: 'linear',
-          min: 0,
-          minRange: 10000
+          minRange: 10000,
+          min: 0
         }
         ,
         yAxis: {
@@ -137,10 +138,13 @@
           gotEventInLast500ms = false;
         }, 1000);
         var dev = devices[data.deviceId];
-        dev.serie.addPoint([ dev.offset + data.timestamp - dev.firstEventFromDevice,
+        var t = (dev.offset + data.timestamp - dev.firstEventFromDevice);
+        dev.serie.addPoint([ t,
                            Math.abs(data.z)],
-                           true,
-                           false);
+                           true);
+        if (t > 10000 && (t - 10000 > chart.xAxis[0].min)) {
+          chart.xAxis[0].setExtremes((t) - 10000);
+        }
       }
     };
     document.querySelector('#new-series').onclick = function() {
