@@ -25,7 +25,10 @@ var server = ws.createServer(function(conn) {
 
 function broadcast(msg) {
   server.connections.forEach(function(conn) {
-    conn.sendText(msg);
+    try {
+      conn.sendText(msg);
+    }
+    catch (ex) {}
   });
 }
 

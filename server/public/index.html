@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DeviceMotion Multi</title>
   <script src="jquery.js"></script>
-  <script src="chart.js"></script>
+  <script src="canvasjs.js"></script>
   <style>
     html,
     body {
@@ -36,76 +36,27 @@
 
   <script>
     var container = document.getElementById('container');
-    var chart;
-    $(document).ready(function () {
-      Highcharts.setOptions( {
-        global: {
-          useUTC: false
-        }
+
+    var chart = new CanvasJS.Chart(container, {
+      title: {
+        text: "DeviceMotion"
+      },
+      data: [],
+      axisY: {
+        minimum: -10,
+        maximum: 80
+      },
+      axisX: {
+        minimum: 0,
+        maximum: 10000,
+        valueFormatString: " "
+      },
+      toolTip: {
+        enabled: false
       }
-      );
-      $(container).highcharts( {
-        plotOptions: {
-          series: {
-            animation: false
-          },
-          spline: {
-            animation: false
-          },
-          line: {
-            animation: false,
-            marker: { enabled: false }
-          }
-        },
-        chart: {
-          type: 'line',
-          animation: false,
-          marginRight: 10,
-          events: {
-            load: function () {
-              chart = this;
-            }
-          }
-        }
-        ,
-        title: {
-          text: 'DeviceMotion'
-        }
-        ,
-        xAxis: {
-          type: 'linear',
-          minRange: 10000,
-          min: 0
-        }
-        ,
-        yAxis: {
-          title: {
-            text: 'Value'
-          }
-          ,
-          plotLines:[ {
-            value: 0, width: 1, color: '#808080'
-          }
-          ],
-          min: -3,
-          max: 80
-        }
-        ,
-        tooltip: {
-          enabled: false
-        }
-        ,
-        legend: {
-          enabled: false
-        }
-        ,
-        exporting: {
-          enabled: false
-        }
-      }
-      );
-    }
-    );
+    });
+
+    var highest = 10000;
     var gotEventInLast500ms = false;
     var _geilTimer = null;
     var devices = {};
@@ -115,17 +66,15 @@
       if (typeof data === 'string') data = JSON.parse(data);
       if (data && data.type === 'devicemotion') {
         if (!devices[data.deviceId]) {
-          var serie = chart.addSeries({
-            name: 'Another one',
-            data: []
-          });
+          var serie = { type: "line", device: data.deviceId, dataPoints: [] };
+          chart.options.data.push(serie);
+
           devices[data.deviceId] = {
             firstEventFromDevice: data.timestamp,
             firstEventOnServer: Date.now(),
             serie: serie,
             offset: 0
           };
-          serie.device = devices[data.deviceId];
           if (gotEventInLast500ms) {
             // we need to sync this thing up with the other chart. We use series[0] as a basic
             devices[data.deviceId].offset = Date.now() - chart.series[0].device.firstEventOnServer;
@@ -139,21 +88,34 @@
         }, 1000);
         var dev = devices[data.deviceId];
         var t = (dev.offset + data.timestamp - dev.firstEventFromDevice);
-        dev.serie.addPoint([ t,
-                           Math.abs(data.z)],
-                           true);
-        if (t > 10000 && (t - 10000 > chart.xAxis[0].min)) {
-          chart.xAxis[0].setExtremes((t) - 10000);
+        dev.serie.dataPoints.push({ x: t, y: Math.abs(data.z) });
+        if (dev.serie.dataPoints[dev.serie.dataPoints.length - 1] - dev.serie.dataPoints[0] > 10000) {
+          dev.serie.dataPoints.shift();
         }
+        if (t > highest) {
+          highest = t;
+          chart.options.axisX.minimum = t - 10000;
+          chart.options.axisX.maximum = t;
+        }
+        // if (t > 10000 && (t - 10000 > chart.xAxis[0].min)) {
+        //   chart.xAxis[0].setExtremes((t) - 10000);
+        // }
       }
     };
     document.querySelector('#new-series').onclick = function() {
       devices = {};
     };
     document.querySelector('#remove').onclick = function() {
-      chart.series[chart.series.length - 1].remove();
+      // chart.series[chart.series.length - 1].remove();
       document.querySelector('#new-series').onclick();
     };
+
+    function render() {
+      chart.render();
+
+      requestAnimationFrame(render);
+    }
+    requestAnimationFrame(render);
   </script>
 </body>
 
